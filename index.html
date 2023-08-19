@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" as="fetch" crossorigin href="ysqd.ogg" />
+    <link rel="prefetch" as="image" href="ysqd.png" />
+    <title>原神启动器</title>
+    <style>
+      :root {
+        background-color: white;
+        color: black;
+        user-select: none;
+      }
+      #text {
+        white-space: pre-wrap;
+      }
+      #img {
+        position: absolute;
+        margin: auto;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        animation: fadein 2s;
+      }
+      @keyframes fadein {
+        from {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="main">
+      <div id="text">正在加载音频</div>
+      <img hidden id="img" src="ysqd.png" />
+    </main>
+    <script>
+      let disabled = false
+      const auCtx = new AudioContext()
+      const src = auCtx.createBufferSource()
+      const qidongTime = 47.74273242630385
+      const bufferPromise = fetch("ysqd.ogg")
+        .then(resp => resp.arrayBuffer())
+        .then(aub => {
+          disabled = false
+          text.textContent = "点击屏幕启动"
+          return aub
+        })
+
+      async function start() {
+        const buffer = await bufferPromise
+        const aub = await auCtx.decodeAudioData(buffer)
+        src.buffer = aub
+        src.connect(auCtx.destination)
+        let offset = auCtx.currentTime + 0.1
+        src.onended = () => {
+          src.disconnect()
+          auCtx.close()
+          clearInterval(h)
+        }
+        src.start(offset)
+
+        const h = setInterval(() => {
+          if (auCtx.currentTime - offset > src.loopEnd)
+            offset += src.loopEnd - src.loopStart
+          const time = auCtx.currentTime - offset
+          text.textContent = src.loop
+            ? `\
+播放中
+最快可在 ${(qidongTime - time).toFixed(1)} 秒后启动
+${
+  time < src.loopStart
+    ? `${(src.loopStart - time).toFixed(1)} 秒后进入循环`
+    : `${(src.loopEnd - time).toFixed(1)} 秒后将循环，点击屏幕进入下一乐段`
+}`
+            : `播放中\n${(qidongTime - time).toFixed(1)} 秒后启动`
+          disabled = time < src.loopStart
+
+          if (time >= qidongTime) {
+            text.hidden = true
+            img.hidden = false
+          }
+        }, 50)
+      }
+
+      let running = false
+      let i = 0
+      document.documentElement.onclick = () => {
+        if (running || disabled) return
+        running = true
+        switch (i++) {
+          case 0:
+            start()
+            src.loop = true
+            src.loopStart = 10.365079365079365
+            src.loopEnd = 18.23392290249433
+            break
+          case 1:
+            src.loopStart = 18.23392290249433
+            src.loopEnd = 33.97163265306123
+            break
+          case 2:
+            src.loopStart = 33.97163265306123
+            src.loopEnd = 41.83956916099773
+            break
+          case 3:
+            src.loop = false
+            src.loopStart = qidongTime
+            src.loopEnd = qidongTime
+            break
+        }
+        running = false
+      }
+    </script>
+  </body>
+</html>
