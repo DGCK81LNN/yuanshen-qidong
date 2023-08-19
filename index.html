@@ -50,6 +50,7 @@
         })
 
       async function start() {
+        auCtx.resume()
         const buffer = await bufferPromise
         const aub = await auCtx.decodeAudioData(buffer)
         src.buffer = aub
