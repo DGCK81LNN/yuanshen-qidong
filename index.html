@@ -2,7 +2,7 @@
 <html lang="zh-cmn-Hans">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="preload" as="fetch" crossorigin href="ysqd.ogg" />
     <link rel="prefetch" as="image" href="ysqd.png" />
     <title>《原神启动器》</title>
@@ -29,11 +29,27 @@
           opacity: 0;
         }
       }
+      #img.fadeout {
+        animation: fadeout 5s forwards;
+      }
+      @keyframes fadeout {
+        to {
+          opacity: 0;
+        }
+      }
     </style>
   </head>
   <body>
     <main id="main">
       <div id="text">正在加载音频</div>
+      <div id="buttons">
+        给手机用户准备的按钮，显然我一开始偷懒了只支持键盘输入，但现在有了
+        <button onclick="skip=4;prepare()">1</button>
+        <button onclick="skip=3;prepare()">2</button>
+        <button onclick="skip=2;prepare()">3</button>
+        <button onclick="skip=1;prepare()">4</button>
+        <button onclick="skip=0;prepare()">5</button>
+      </div>
       <img hidden id="img" src="ysqd.png" />
     </main>
     <script>
@@ -52,6 +68,7 @@
       ]
       const auCtx = new AudioContext()
       const src = auCtx.createBufferSource()
+      const gain = auCtx.createGain()
       const qidongTime = 49.70750566893424
       const bufferPromise = fetch("ysqd.ogg")
         .then(resp => resp.arrayBuffer())
@@ -61,7 +78,11 @@
           return aub
         })
 
+      gain.connect(auCtx.destination)
+
       async function start() {
+        started = true
+        buttons.hidden = true
         auCtx.resume()
         const buffer = await bufferPromise
         const aub = await auCtx.decodeAudioData(buffer)
@@ -81,7 +102,7 @@
           }
         }
         src.buffer = aub2
-        src.connect(auCtx.destination)
+        src.connect(gain)
         src.onended = () => {
           src.disconnect()
           auCtx.close()
@@ -110,6 +131,10 @@ ${
           if (time >= qidongTime - skipTime) {
             text.hidden = true
             img.hidden = false
+            setTimeout(() => {
+              canTriggerFadeOut = true
+            }, 2000)
+            clearInterval(h)
           }
         }, 50)
       }
@@ -117,11 +142,16 @@ ${
       let running = false
       let started = false
       let i = 0
+      let canTriggerFadeOut = false
       function next() {
+        if (canTriggerFadeOut) {
+          img.classList.add("fadeout")
+          gain.gain.linearRampToValueAtTime(0, auCtx.currentTime + 5)
+          canTriggerFadeOut = false
+        }
         if (running || disabled) return
         running = true
         if (!started) start()
-        started = true
         switch (i++) {
           case 0:
             src.loop = true
@@ -147,17 +177,21 @@ ${
         running = false
       }
 
-      document.onclick = next
+      document.onclick = ev => {
+        if (ev.target.tagName === "BUTTON") return
+        next()
+      }
 
       document.onkeydown = ev => {
         if (started) return
         if ([..."12345"].includes(ev.key)) {
-          i = skip = 5 - ev.key
+          skip = 5 - ev.key
           prepare()
         }
       }
       function prepare() {
-        text.textContent = `${skipNames[skip]}，启动时间 ${(qidongTime - skipTimes[skip]).toFixed(1)} 秒\n按 1-5 选择前摇长度\n点击屏幕启动`
+        i = skip
+        text.textContent = `${skipNames[skip]}，启动时间 ${(qidongTime - skipTimes[skip]).toFixed(1)} 秒\n按 1-5 选择前摇长度\n使用方法：点击屏幕开始播放启动的小曲（“Shed a Light (Like Instrumental Mix)”），前摇会自动循环，点击屏幕离开当前循环进入下一段，直到最后进入副歌部分，此时会显示原神启动画面，点击屏幕停止播放`
       }
     </script>
   </body>
