@@ -57,7 +57,7 @@
         .then(resp => resp.arrayBuffer())
         .then(aub => {
           disabled = false
-          text.textContent = skipNames[0] + "\n按 1-5 选择前摇长度\n点击屏幕启动"
+          prepare()
           return aub
         })
 
@@ -152,10 +152,12 @@ ${
       document.onkeydown = ev => {
         if (started) return
         if ([..."12345"].includes(ev.key)) {
-          skip = 5 - ev.key
-          i = 5 - ev.key
-          text.textContent = `${skipNames[skip]}\n按 1-5 选择前摇长度\n点击屏幕启动`
+          i = skip = 5 - ev.key
+          prepare()
         }
+      }
+      function prepare() {
+        text.textContent = `${skipNames[skip]}，启动时间 ${(qidongTime - skipTimes[skip]).toFixed(1)} 秒\n按 1-5 选择前摇长度\n点击屏幕启动`
       }
     </script>
   </body>
